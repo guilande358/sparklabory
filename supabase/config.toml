@@ -1,1 +1,16 @@
 project_id = "jhzowpvpwuqzlqribejb"
+
+[functions.grok-chat]
+verify_jwt = false
+
+[functions.grok-hypothesis]
+verify_jwt = false
+
+[functions.grok-research]
+verify_jwt = false
+
+[functions.grok-report]
+verify_jwt = false
+
+[functions.grok-suggestion]
+verify_jwt = true
