@@ -4,9 +4,20 @@ import { useNavigate } from "react-router-dom";
 import FeatureCard from "@/components/FeatureCard";
 import Navigation from "@/components/Navigation";
 import heroImage from "@/assets/hero-science.jpg";
+import { useAuth } from "@/hooks/useAuth";
+import { useProjects } from "@/hooks/useProjects";
+import { useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { projects } = useProjects(user?.id);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+    }
+  }, [user, navigate]);
 
   const features = [
     {
@@ -73,15 +84,15 @@ const Index = () => {
       <section className="max-w-md mx-auto px-4 -mt-8 relative z-10">
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-card rounded-xl p-4 shadow-md text-center">
-            <p className="text-2xl font-bold text-primary">12</p>
+            <p className="text-2xl font-bold text-primary">{projects.length}</p>
             <p className="text-xs text-muted-foreground">Projects</p>
           </div>
           <div className="bg-card rounded-xl p-4 shadow-md text-center">
-            <p className="text-2xl font-bold text-secondary">28</p>
+            <p className="text-2xl font-bold text-secondary">0</p>
             <p className="text-xs text-muted-foreground">Experiments</p>
           </div>
           <div className="bg-card rounded-xl p-4 shadow-md text-center">
-            <p className="text-2xl font-bold text-accent">2.4K</p>
+            <p className="text-2xl font-bold text-accent">0</p>
             <p className="text-xs text-muted-foreground">Points</p>
           </div>
         </div>
@@ -118,7 +129,12 @@ const Index = () => {
           <p className="text-sm text-primary-foreground/90 mb-4">
             Begin a new research project or experiment today
           </p>
-          <Button variant="secondary" size="lg" className="shadow-md">
+          <Button 
+            variant="secondary" 
+            size="lg" 
+            className="shadow-md"
+            onClick={() => navigate("/projects")}
+          >
             Create New Project
           </Button>
         </div>
