@@ -3,29 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Navigation from "@/components/Navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { useAchievements } from "@/hooks/useAchievements";
-import { useProjects } from "@/hooks/useProjects";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 
 const Achievements = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { achievements, challenges, loading } = useAchievements(user?.id);
-  const { projects } = useProjects(user?.id);
-
-  useEffect(() => {
-    if (!user) {
-      navigate("/auth");
-    }
-  }, [user, navigate]);
-
-  const totalPoints = achievements.reduce((sum, ach) => sum + (ach.points || 0), 0);
   const stats = [
-    { label: "Total Points", value: totalPoints.toString(), icon: Star, color: "text-accent" },
-    { label: "Projects Completed", value: projects.filter(p => p.status === "completed").length.toString(), icon: Target, color: "text-secondary" },
-    { label: "Experiments Done", value: "0", icon: Zap, color: "text-primary" },
+    { label: "Total Points", value: "2,450", icon: Star, color: "text-accent" },
+    { label: "Projects Completed", value: "12", icon: Target, color: "text-secondary" },
+    { label: "Experiments Done", value: "28", icon: Zap, color: "text-primary" },
   ];
 
   const badges = [
@@ -56,6 +39,21 @@ const Achievements = () => {
       description: "Get 100% on 5 quizzes",
       earned: false,
       color: "bg-gradient-accent",
+    },
+  ];
+
+  const challenges = [
+    {
+      title: "Weekly Chemistry Challenge",
+      description: "Complete 3 chemistry experiments",
+      progress: 66,
+      reward: "150 points",
+    },
+    {
+      title: "Research Paper",
+      description: "Submit a research paper this month",
+      progress: 30,
+      reward: "500 points",
     },
   ];
 
@@ -124,36 +122,30 @@ const Achievements = () => {
         {/* Active Challenges */}
         <div className="space-y-4">
           <h2 className="text-lg font-bold">Active Challenges</h2>
-          {loading ? (
-            <p className="text-center text-muted-foreground">Loading challenges...</p>
-          ) : challenges.length > 0 ? (
-            challenges.map((challenge, index) => (
-              <Card 
-                key={challenge.id}
-                className="p-5 space-y-3 hover:shadow-md transition-all animate-slide-up"
-                style={{ animationDelay: `${(index + 7) * 0.1}s` }}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-card-foreground mb-1">{challenge.title}</h3>
-                    <p className="text-sm text-muted-foreground">{challenge.description}</p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0">
-                    {challenge.reward_points} pts
-                  </Badge>
+          {challenges.map((challenge, index) => (
+            <Card 
+              key={index}
+              className="p-5 space-y-3 hover:shadow-md transition-all animate-slide-up"
+              style={{ animationDelay: `${(index + 7) * 0.1}s` }}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="font-bold text-card-foreground mb-1">{challenge.title}</h3>
+                  <p className="text-sm text-muted-foreground">{challenge.description}</p>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Progress</span>
-                    <span>{Math.round(((challenge.progress || 0) / challenge.target) * 100)}%</span>
-                  </div>
-                  <Progress value={((challenge.progress || 0) / challenge.target) * 100} className="h-2" />
+                <Badge variant="outline" className="shrink-0">
+                  {challenge.reward}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Progress</span>
+                  <span>{challenge.progress}%</span>
                 </div>
-              </Card>
-            ))
-          ) : (
-            <p className="text-center text-muted-foreground">No active challenges</p>
-          )}
+                <Progress value={challenge.progress} className="h-2" />
+              </div>
+            </Card>
+          ))}
         </div>
       </main>
 
