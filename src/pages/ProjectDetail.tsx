@@ -34,17 +34,24 @@ const ProjectDetail = () => {
   const [results, setResults] = useState("");
 
   useEffect(() => {
-    loadProject();
-    loadMembers();
+    if (id) {
+      loadProject();
+      loadMembers();
+    }
   }, [id]);
 
   const loadProject = async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from("projects")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
@@ -66,6 +73,8 @@ const ProjectDetail = () => {
   };
 
   const loadMembers = async () => {
+    if (!id) return;
+    
     try {
       const { data, error } = await supabase
         .from("project_members")

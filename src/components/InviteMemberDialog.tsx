@@ -32,17 +32,21 @@ const InviteMemberDialog = ({ projectId, onMemberAdded }: InviteMemberDialogProp
 
     setSearching(true);
     try {
-      // Search for user by email in profiles
+      // Search for profile - assuming email will be added to profiles table
+      // For now, we'll use a simple approach where users enter user ID
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .ilike("id", `%${email}%`)
-        .single();
+        .ilike("full_name", `%${email}%`)
+        .limit(1)
+        .maybeSingle();
 
-      if (error) {
+      if (error) throw error;
+
+      if (!data) {
         toast({
           title: "User not found",
-          description: "No user found with this email",
+          description: "No user found with this name or email",
           variant: "destructive",
         });
         setFoundUser(null);
@@ -53,9 +57,10 @@ const InviteMemberDialog = ({ projectId, onMemberAdded }: InviteMemberDialogProp
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Unable to search users. Please try again.",
         variant: "destructive",
       });
+      setFoundUser(null);
     } finally {
       setSearching(false);
     }
@@ -111,12 +116,12 @@ const InviteMemberDialog = ({ projectId, onMemberAdded }: InviteMemberDialogProp
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="email">User Email</Label>
+            <Label htmlFor="email">Search User</Label>
             <div className="flex gap-2">
               <Input
                 id="email"
-                type="email"
-                placeholder="user@example.com"
+                type="text"
+                placeholder="Enter user name"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}

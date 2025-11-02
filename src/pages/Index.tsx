@@ -1,12 +1,48 @@
 import { FlaskConical, FolderKanban, Users, BookOpen, Trophy, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import FeatureCard from "@/components/FeatureCard";
 import Navigation from "@/components/Navigation";
 import heroImage from "@/assets/hero-science.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ projects: 0, experiments: 0, points: 0 });
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: projectsData } = await supabase
+        .from("projects")
+        .select("id, status")
+        .eq("user_id", user.id);
+
+      const { data: experimentsData } = await supabase
+        .from("experiments")
+        .select("id")
+        .eq("user_id", user.id);
+
+      // Calculate points based on completed projects and experiments
+      const completedProjects = projectsData?.filter((p: any) => p.status === 'completed').length || 0;
+      const points = (completedProjects * 100) + (experimentsData?.length || 0) * 50;
+
+      setStats({
+        projects: projectsData?.length || 0,
+        experiments: experimentsData?.length || 0,
+        points: points,
+      });
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
+  };
 
   const features = [
     {
@@ -73,15 +109,15 @@ const Index = () => {
       <section className="max-w-md mx-auto px-4 -mt-8 relative z-10">
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-card rounded-xl p-4 shadow-md text-center">
-            <p className="text-2xl font-bold text-primary">12</p>
+            <p className="text-2xl font-bold text-primary">{stats.projects}</p>
             <p className="text-xs text-muted-foreground">Projects</p>
           </div>
           <div className="bg-card rounded-xl p-4 shadow-md text-center">
-            <p className="text-2xl font-bold text-secondary">28</p>
+            <p className="text-2xl font-bold text-secondary">{stats.experiments}</p>
             <p className="text-xs text-muted-foreground">Experiments</p>
           </div>
           <div className="bg-card rounded-xl p-4 shadow-md text-center">
-            <p className="text-2xl font-bold text-accent">2.4K</p>
+            <p className="text-2xl font-bold text-accent">{stats.points}</p>
             <p className="text-xs text-muted-foreground">Points</p>
           </div>
         </div>
@@ -118,7 +154,12 @@ const Index = () => {
           <p className="text-sm text-primary-foreground/90 mb-4">
             Begin a new research project or experiment today
           </p>
-          <Button variant="secondary" size="lg" className="shadow-md">
+          <Button 
+            variant="secondary" 
+            size="lg" 
+            className="shadow-md"
+            onClick={() => navigate("/projects")}
+          >
             Create New Project
           </Button>
         </div>
