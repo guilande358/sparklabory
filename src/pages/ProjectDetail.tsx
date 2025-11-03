@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, MessageSquare, Lightbulb, FileText, Download } from "lucide-react";
+import { ArrowLeft, Users, MessageSquare, Lightbulb, FileText, Download, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -355,15 +355,24 @@ const ProjectDetail = () => {
         </Card>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <Button 
+            onClick={() => navigate(`/lab?project=${id}`)} 
+            variant="secondary"
+            className="flex-1 min-w-[200px]"
+          >
+            <Beaker className="w-4 h-4 mr-2" />
+            Open in Virtual Lab
+          </Button>
+          
           {isEditable && (
-            <Button onClick={handleMarkComplete} className="flex-1">
+            <Button onClick={handleMarkComplete} className="flex-1 min-w-[200px]">
               <FileText className="w-4 h-4 mr-2" />
               Mark as Completed
             </Button>
           )}
           {project.status === "completed" && (
-            <Button onClick={handleGeneratePDF} variant="outline" className="flex-1">
+            <Button onClick={handleGeneratePDF} variant="outline" className="flex-1 min-w-[200px]">
               <Download className="w-4 h-4 mr-2" />
               Generate PDF Report
             </Button>
