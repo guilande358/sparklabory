@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navigation from "@/components/Navigation";
+import FloatingAssistant from "@/components/FloatingAssistant";
 import Simulation3D from "@/components/lab/Simulation3D";
 import Simulation2D from "@/components/lab/Simulation2D";
 import ExternalSimulatorConfig from "@/components/lab/ExternalSimulatorConfig";
@@ -131,6 +132,7 @@ const VirtualLab = () => {
         </main>
 
         <Navigation />
+        <FloatingAssistant context="Laboratório Virtual - Lista de Experimentos" />
       </div>
     );
   }
@@ -236,6 +238,7 @@ const VirtualLab = () => {
       </main>
 
       <Navigation />
+      <FloatingAssistant context={`Laboratório Virtual - Simulação ${viewMode.toUpperCase()} - O usuário está trabalhando com uma simulação interativa`} />
     </div>
   );
 };

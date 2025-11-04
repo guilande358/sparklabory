@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FolderKanban, Trophy, User } from "lucide-react";
+import { Home, FlaskConical, FolderKanban, Trophy, User, HelpCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ const Navigation = () => {
     { icon: Home, label: "Home", path: "/" },
     { icon: FolderKanban, label: "Projects", path: "/projects" },
     { icon: FlaskConical, label: "Lab", path: "/lab" },
-    { icon: Trophy, label: "Achievements", path: "/achievements" },
+    { icon: HelpCircle, label: "Help", path: "/help" },
     { icon: User, label: "Profile", path: "/profile" },
   ];
 

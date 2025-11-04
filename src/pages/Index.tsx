@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import FeatureCard from "@/components/FeatureCard";
 import Navigation from "@/components/Navigation";
+import FloatingAssistant from "@/components/FloatingAssistant";
 import heroImage from "@/assets/hero-science.jpg";
 
 const Index = () => {
@@ -166,6 +167,7 @@ const Index = () => {
       </section>
 
       <Navigation />
+      <FloatingAssistant context="Página Inicial - O usuário está visualizando o dashboard e suas estatísticas" />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import VirtualLab from "./pages/VirtualLab";
 import Achievements from "./pages/Achievements";
 import Profile from "./pages/Profile";
+import HelpCenter from "./pages/HelpCenter";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/lab" element={<ProtectedRoute><VirtualLab /></ProtectedRoute>} />
           <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><HelpCenter /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
