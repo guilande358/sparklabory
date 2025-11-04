@@ -6,7 +6,7 @@ export const useGrok = () => {
 
   const askGrok = async (question: string, context?: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('grok-chat', {
+      const { data, error } = await supabase.functions.invoke('lovable-chat', {
         body: { question, context }
       });
 
@@ -14,8 +14,8 @@ export const useGrok = () => {
       return data.answer;
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to get Grok response",
+        title: "Erro",
+        description: error.message || "Falha ao obter resposta do assistente",
         variant: "destructive",
       });
       return null;
