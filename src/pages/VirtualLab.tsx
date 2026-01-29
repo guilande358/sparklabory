@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Beaker, Microscope, Atom, Dna, TestTube, Brain, ArrowLeft, Layers, Box } from "lucide-react";
+import { Beaker, Microscope, Atom, Dna, TestTube, Brain, ArrowLeft, Layers, Box, PenTool } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,61 +8,78 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navigation from "@/components/Navigation";
 import FloatingAssistant from "@/components/FloatingAssistant";
 import Simulation3D from "@/components/lab/Simulation3D";
-import Simulation2D from "@/components/lab/Simulation2D";
+import Designer2D from "@/components/lab/Designer2D";
 import ExternalSimulatorConfig from "@/components/lab/ExternalSimulatorConfig";
 import virtualLabImage from "@/assets/virtual-lab.jpg";
+import { DiagramNode, DiagramEdge } from "@/lib/diagramTypes";
+
+type ViewMode = "list" | "designer" | "simulation";
 
 const VirtualLab = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const projectId = searchParams.get("project");
-  const [viewMode, setViewMode] = useState<"list" | "3d" | "2d">(projectId ? "3d" : "list");
+  const [viewMode, setViewMode] = useState<ViewMode>(projectId ? "designer" : "list");
   const [externalConfig, setExternalConfig] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<"designer" | "preview">("designer");
+  const [designData, setDesignData] = useState<{ nodes: DiagramNode[]; edges: DiagramEdge[] }>({
+    nodes: [],
+    edges: [],
+  });
 
   const experiments = [
     {
       icon: Beaker,
-      title: "Chemical Reactions",
-      description: "Mix virtual chemicals and observe reactions in real-time",
-      difficulty: "Intermediate",
+      title: "Reações Químicas",
+      description: "Misture substâncias virtuais e observe reações em tempo real",
+      difficulty: "Intermediário",
       color: "text-accent",
     },
     {
       icon: Microscope,
-      title: "Cell Biology",
-      description: "Explore cellular structures and their functions",
-      difficulty: "Beginner",
+      title: "Biologia Celular",
+      description: "Explore estruturas celulares e suas funções",
+      difficulty: "Iniciante",
       color: "text-primary",
     },
     {
       icon: Atom,
-      title: "Atomic Structure",
-      description: "Visualize atoms, electrons, and quantum mechanics",
-      difficulty: "Advanced",
+      title: "Estrutura Atômica",
+      description: "Visualize átomos, elétrons e mecânica quântica",
+      difficulty: "Avançado",
       color: "text-secondary",
     },
     {
       icon: Dna,
-      title: "DNA Sequencing",
-      description: "Learn about genetic codes and protein synthesis",
-      difficulty: "Intermediate",
+      title: "Sequenciamento de DNA",
+      description: "Aprenda sobre códigos genéticos e síntese de proteínas",
+      difficulty: "Intermediário",
       color: "text-primary",
     },
     {
       icon: TestTube,
-      title: "Titration Experiment",
-      description: "Master acid-base titration techniques",
-      difficulty: "Beginner",
+      title: "Experimento de Titulação",
+      description: "Domine técnicas de titulação ácido-base",
+      difficulty: "Iniciante",
       color: "text-accent",
     },
     {
       icon: Brain,
-      title: "Neural Networks",
-      description: "Understand how neurons communicate and process information",
-      difficulty: "Advanced",
+      title: "Redes Neurais",
+      description: "Entenda como neurônios comunicam e processam informação",
+      difficulty: "Avançado",
       color: "text-secondary",
     },
   ];
+
+  const handleRunSimulation = useCallback((nodes: DiagramNode[], edges: DiagramEdge[]) => {
+    setDesignData({ nodes, edges });
+    setActiveTab("preview");
+  }, []);
+
+  const handleBackToDesigner = useCallback(() => {
+    setActiveTab("designer");
+  }, []);
 
   if (viewMode === "list") {
     return (
@@ -71,7 +88,7 @@ const VirtualLab = () => {
         <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b border-border/50 shadow-sm">
           <div className="max-w-md mx-auto px-4 py-4">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Virtual Laboratory
+              Laboratório Virtual
             </h1>
           </div>
         </header>
@@ -87,17 +104,27 @@ const VirtualLab = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4">
               <h2 className="text-xl font-bold text-card-foreground mb-1">
-                Explore Science Safely
+                Explore Ciência com Segurança
               </h2>
               <p className="text-sm text-muted-foreground">
-                Conduct experiments without the mess or danger
+                Conduza experimentos sem bagunça ou perigo
               </p>
             </div>
           </div>
 
+          {/* New Project Button */}
+          <Button 
+            className="w-full gap-2" 
+            size="lg"
+            onClick={() => setViewMode("designer")}
+          >
+            <PenTool className="w-5 h-5" />
+            Criar Novo Projeto
+          </Button>
+
           {/* Experiments Grid */}
           <div>
-            <h3 className="text-lg font-bold mb-4">Available Experiments</h3>
+            <h3 className="text-lg font-bold mb-4">Experimentos Disponíveis</h3>
             <div className="grid grid-cols-1 gap-4">
               {experiments.map((experiment, index) => {
                 const Icon = experiment.icon;
@@ -106,7 +133,7 @@ const VirtualLab = () => {
                     key={index}
                     className="p-5 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer animate-slide-up"
                     style={{ animationDelay: `${index * 0.1}s` }}
-                    onClick={() => setViewMode("3d")}
+                    onClick={() => setViewMode("designer")}
                   >
                     <div className="flex items-start gap-4">
                       <div className="p-3 rounded-xl bg-gradient-primary/20">
@@ -141,104 +168,73 @@ const VirtualLab = () => {
     <div className="min-h-screen bg-gradient-hero pb-20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b border-border/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setViewMode("list")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent flex-1">
-            Interactive Simulation Lab
+            Laboratório de Simulação
           </h1>
+          
+          {/* Mode Toggle Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "designer" | "preview")}>
+            <TabsList className="grid w-auto grid-cols-2">
+              <TabsTrigger value="designer" className="gap-2">
+                <PenTool className="w-4 h-4" />
+                <span className="hidden sm:inline">Designer 2D</span>
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="gap-2">
+                <Box className="w-4 h-4" />
+                <span className="hidden sm:inline">Preview 3D</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <ExternalSimulatorConfig onConnect={setExternalConfig} />
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar Panel */}
-          <Card className="lg:col-span-1 p-6 h-fit space-y-6">
-            <div>
-              <h3 className="font-bold text-lg mb-2">Simulation Mode</h3>
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant={viewMode === "2d" ? "default" : "outline"}
-                  onClick={() => setViewMode("2d")}
-                  className="justify-start"
-                >
-                  <Layers className="w-4 h-4 mr-2" />
-                  2D Simulation
-                </Button>
-                <Button
-                  variant={viewMode === "3d" ? "default" : "outline"}
-                  onClick={() => setViewMode("3d")}
-                  className="justify-start"
-                >
-                  <Box className="w-4 h-4 mr-2" />
-                  3D Simulation
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-lg mb-2">Project Properties</h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Name</p>
-                  <p className="font-medium">Chemical Reaction Sim</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Status</p>
-                  <Badge variant="secondary">Running</Badge>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Type</p>
-                  <p className="font-medium">{viewMode === "3d" ? "3D Interactive" : "2D Particle System"}</p>
-                </div>
-              </div>
-            </div>
-
-            {externalConfig && (
-              <div>
-                <h3 className="font-bold text-lg mb-2">External Simulator</h3>
-                <div className="space-y-2 text-sm">
+      <main className="max-w-7xl mx-auto px-4 py-4">
+        <div className="h-[calc(100vh-10rem)]">
+          {activeTab === "designer" ? (
+            <Designer2D 
+              onRunSimulation={handleRunSimulation}
+              initialNodes={designData.nodes}
+              initialEdges={designData.edges}
+            />
+          ) : (
+            <Card className="h-full p-4">
+              <div className="h-full flex flex-col">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-muted-foreground">Type</p>
-                    <p className="font-medium capitalize">{externalConfig.type}</p>
+                    <h2 className="font-bold text-lg">Pré-visualização 3D</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {designData.nodes.length > 0 
+                        ? `${designData.nodes.length} elementos no design`
+                        : "Crie um design para visualizar a simulação"}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">URL</p>
-                    <p className="font-medium text-xs truncate">{externalConfig.url}</p>
-                  </div>
-                  <Badge className="bg-secondary">Connected</Badge>
+                  <Button variant="outline" onClick={handleBackToDesigner}>
+                    <PenTool className="w-4 h-4 mr-2" />
+                    Voltar ao Designer
+                  </Button>
+                </div>
+                <div className="flex-1">
+                  <Simulation3D 
+                    projectData={designData}
+                    onDataChange={setDesignData}
+                  />
                 </div>
               </div>
-            )}
-
-            <div>
-              <h3 className="font-bold text-lg mb-2">Instructions</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Click and drag to rotate</li>
-                <li>• Scroll to zoom in/out</li>
-                <li>• Use controls to adjust parameters</li>
-                <li>• Connect external simulators for advanced features</li>
-              </ul>
-            </div>
-          </Card>
-
-          {/* Main Simulation Area */}
-          <div className="lg:col-span-3">
-            <Card className="p-6 h-[calc(100vh-12rem)]">
-              {viewMode === "3d" ? (
-                <Simulation3D />
-              ) : (
-                <Simulation2D />
-              )}
             </Card>
-          </div>
+          )}
         </div>
       </main>
 
       <Navigation />
-      <FloatingAssistant context={`Laboratório Virtual - Simulação ${viewMode.toUpperCase()} - O usuário está trabalhando com uma simulação interativa`} />
+      <FloatingAssistant 
+        context={`Laboratório Virtual - ${activeTab === "designer" ? "Designer 2D" : "Preview 3D"} - O usuário está ${activeTab === "designer" ? "criando um diagrama de experimento" : "visualizando a simulação 3D"}`} 
+      />
     </div>
   );
 };
