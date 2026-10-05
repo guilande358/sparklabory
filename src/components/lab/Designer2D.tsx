@@ -7,6 +7,7 @@ import DiagramCanvas from "./designer/DiagramCanvas";
 import BlockPalette from "./designer/BlockPalette";
 import BlockPropertiesPanel from "./designer/BlockPropertiesPanel";
 import DesignerToolbar from "./designer/DesignerToolbar";
+import ReactionsPanel from "./designer/ReactionsPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -218,6 +219,8 @@ const Designer2D = ({ onRunSimulation, initialNodes = [], initialEdges = [] }: D
           ))}
         </div>
       )}
+
+      <ReactionsPanel nodes={state.nodes} edges={state.edges} />
 
       {/* Main content */}
       <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-xl border border-border">
