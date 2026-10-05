@@ -13,7 +13,7 @@ export interface SimulationState {
 
 export interface SimulationEffect {
   id: string;
-  type: "explosion" | "fire" | "smoke" | "bubbles" | "color_change" | "leak" | "glow";
+  type: "explosion" | "fire" | "smoke" | "bubbles" | "color_change" | "leak" | "glow" | "precipitate";
   position: { x: number; y: number; z: number };
   intensity: number;
   duration: number;
