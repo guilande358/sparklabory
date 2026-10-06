@@ -39,6 +39,13 @@ const Designer2D = ({ onRunSimulation, initialNodes = [], initialEdges = [] }: D
     // This is called when drag starts - could show a preview
   }, []);
 
+  // No useEffect que monitora nós e arestas:
+useEffect(() => {
+  if (onChange) {
+    onChange(state.nodes, state.edges);
+  }
+}, [state.nodes, state.edges, onChange]);
+
   const handleAddCustomBlock = useCallback(
     (type: BlockType, label: string) => {
       // Add block at center of canvas
