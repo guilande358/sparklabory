@@ -1,238 +1,202 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { DiagramNode, DiagramEdge } from "@/lib/diagramTypes";
 import { Button } from "@/components/ui/button";
-import { RotateCw, ZoomIn, ZoomOut, Play, Pause, RefreshCw } from "lucide-react";
+import { Play, Pause, RotateCw, ZoomIn, ZoomOut, Flame, AlertCircle } from "lucide-react";
 
 interface Simulation3DProps {
-  projectData?: any;
-  onDataChange?: (data: any) => void;
+  projectData: { nodes: DiagramNode[]; edges: DiagramEdge[] };
+  onBackToDesigner?: () => void;
 }
 
-const Simulation3D = ({ projectData, onDataChange }: Simulation3DProps) => {
+export default function Simulation3D({ projectData }: Simulation3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const objectsRef = useRef<THREE.Mesh[]>([]);
-  
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [rotationSpeed, setRotationSpeed] = useState(0.01);
+  const [isHeating, setIsHeating] = useState(true);
+  const flameLightRef = useRef<THREE.PointLight | null>(null);
+  const particlesRef = useRef<THREE.Points | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const width = containerRef.current.clientWidth;
+    const height = containerRef.current.clientHeight;
 
-    // Initialize scene
+    // 1. Cenário e Luzes de Laboratório
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a0f);
+    scene.background = new THREE.Color(0x0f141c);
     sceneRef.current = scene;
 
-    // Setup camera
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.z = 5;
-    cameraRef.current = camera;
+    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+    camera.position.set(0, 4, 8);
+    camera.lookAt(0, 1, 0);
 
-    // Setup renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    containerRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    renderer.setSize(width, height);
+    renderer.shadowMap.enabled = true;
+    containerRef.current.replaceChildren(renderer.domElement);
 
-    // Add lights
-    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    // Iluminação
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
+    const spotLight = new THREE.SpotLight(0xffffff, 2);
+    spotLight.position.set(5, 10, 5);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
 
-    const pointLight = new THREE.PointLight(0x7c3aed, 2, 100);
-    pointLight.position.set(0, 3, 0);
-    scene.add(pointLight);
-
-    // Create demonstration objects
-    const geometry1 = new THREE.BoxGeometry(1, 1, 1);
-    const material1 = new THREE.MeshPhongMaterial({ 
-      color: 0x7c3aed,
-      emissive: 0x7c3aed,
-      emissiveIntensity: 0.3
+    // Bancada de Laboratório (Mesa de cerâmica industrial)
+    const benchGeo = new THREE.BoxGeometry(12, 0.4, 6);
+    const benchMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1e293b, 
+      roughness: 0.3,
+      metalness: 0.1 
     });
-    const cube = new THREE.Mesh(geometry1, material1);
-    cube.position.x = -2;
-    scene.add(cube);
-    objectsRef.current.push(cube);
+    const bench = new THREE.Mesh(benchGeo, benchMat);
+    bench.position.y = -0.2;
+    bench.receiveShadow = true;
+    scene.add(bench);
 
-    const geometry2 = new THREE.TorusGeometry(0.7, 0.3, 16, 100);
-    const material2 = new THREE.MeshPhongMaterial({ 
-      color: 0x10b981,
-      emissive: 0x10b981,
-      emissiveIntensity: 0.3
-    });
-    const torus = new THREE.Mesh(geometry2, material2);
-    torus.position.x = 0;
-    scene.add(torus);
-    objectsRef.current.push(torus);
+    // Grid de alinhamento modular na bancada
+    const grid = new THREE.GridHelper(12, 24, 0x38bdf8, 0x334155);
+    grid.position.y = 0.01;
+    scene.add(grid);
 
-    const geometry3 = new THREE.IcosahedronGeometry(0.8, 0);
-    const material3 = new THREE.MeshPhongMaterial({ 
-      color: 0xf97316,
-      emissive: 0xf97316,
-      emissiveIntensity: 0.3,
-      wireframe: false
-    });
-    const icosahedron = new THREE.Mesh(geometry3, material3);
-    icosahedron.position.x = 2;
-    scene.add(icosahedron);
-    objectsRef.current.push(icosahedron);
+    // 2. Mapeamento dos Blocos 2D para Aparelhos 3D
+    const nodeObjects = new Map<string, THREE.Group>();
+    const nodes = projectData.nodes || [];
+    const count = nodes.length;
 
-    // Add grid helper
-    const gridHelper = new THREE.GridHelper(10, 10, 0x7c3aed, 0x444444);
-    gridHelper.position.y = -2;
-    scene.add(gridHelper);
+    nodes.forEach((node, idx) => {
+      const group = new THREE.Group();
+      // Distribui os equipamentos na bancada com base na posição X do 2D ou índice
+      const posX = count > 1 ? ((idx / (count - 1)) - 0.5) * 6 : 0;
+      group.position.set(posX, 0, 0);
 
-    // Mouse interaction
-    let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
+      const label = node.label.toLowerCase();
 
-    const onMouseDown = () => { isDragging = true; };
-    const onMouseUp = () => { isDragging = false; };
-    
-    const onMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        const deltaX = e.clientX - previousMousePosition.x;
-        const deltaY = e.clientY - previousMousePosition.y;
-        
-        objectsRef.current.forEach(obj => {
-          obj.rotation.y += deltaX * 0.01;
-          obj.rotation.x += deltaY * 0.01;
+      if (label.includes("fogo") || label.includes("bunsen") || label.includes("aquec") || node.type === "process") {
+        // --- BICO DE BUNSEN ---
+        const base = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.5, 0.6, 0.2, 32),
+          new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 })
+        );
+        const tube = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.1, 0.1, 1.2, 16),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 })
+        );
+        tube.position.y = 0.7;
+        group.add(base, tube);
+
+        // Chama de fogo (Cone translúcido azul + laranja)
+        const flameGeo = new THREE.ConeGeometry(0.2, 0.8, 16);
+        const flameMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
+        const flame = new THREE.Mesh(flameGeo, flameMat);
+        flame.position.y = 1.7;
+        group.add(flame);
+
+        const flameLight = new THREE.PointLight(0xf97316, 2, 4);
+        flameLight.position.y = 1.8;
+        group.add(flameLight);
+        flameLightRef.current = flameLight;
+      } else {
+        // --- BÉQUER / FRASCO DE VIDRO ---
+        // Vidro exterior
+        const glassGeo = new THREE.CylinderGeometry(0.6, 0.6, 1.4, 32, 1, true);
+        const glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.4,
+          roughness: 0.1,
+          transmission: 0.9,
+          thickness: 0.5,
         });
+        const glass = new THREE.Mesh(glassGeo, glassMat);
+        glass.position.y = 0.7;
+
+        // Fundo do béquer
+        const bottom = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.6, 0.6, 0.05, 32),
+          glassMat
+        );
+        bottom.position.y = 0.025;
+
+        // Líquido interno (com cor baseada na substância)
+        let liquidColor = 0x0284c7; // Azul padrão
+        if (label.includes("ácido") || label.includes("hcl")) liquidColor = 0xef4444;
+        if (label.includes("base") || label.includes("naoh")) liquidColor = 0xa855f7;
+        if (label.includes("vinagre")) liquidColor = 0xfacc15;
+        if (label.includes("água") || label.includes("h2o")) liquidColor = 0x38bdf8;
+
+        const liquidGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.9, 32);
+        const liquidMat = new THREE.MeshStandardMaterial({
+          color: liquidColor,
+          roughness: 0.2,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const liquid = new THREE.Mesh(liquidGeo, liquidMat);
+        liquid.position.y = 0.47;
+
+        group.add(glass, bottom, liquid);
       }
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
 
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      camera.position.z += e.deltaY * 0.01;
-      camera.position.z = Math.max(2, Math.min(10, camera.position.z));
-    };
+      scene.add(group);
+      nodeObjects.set(node.id, group);
+    });
 
-    renderer.domElement.addEventListener('mousedown', onMouseDown);
-    renderer.domElement.addEventListener('mouseup', onMouseUp);
-    renderer.domElement.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('wheel', onWheel);
+    // 3. Tubulações de Conexão Física (Mangueiras entre recipientes)
+    (projectData.edges || []).forEach(edge => {
+      const sourceObj = nodeObjects.get(edge.source);
+      const targetObj = nodeObjects.get(edge.target);
+      if (sourceObj && targetObj) {
+        const p1 = new THREE.Vector3(sourceObj.position.x, 1.4, 0);
+        const p2 = new THREE.Vector3(
+          (sourceObj.position.x + targetObj.position.x) / 2,
+          2.2,
+          0.3
+        );
+        const p3 = new THREE.Vector3(targetObj.position.x, 1.4, 0);
 
-    // Animation loop
+        const curve = new THREE.CatmullRomCurve3([p1, p2, p3]);
+        const tubeGeo = new THREE.TubeGeometry(curve, 20, 0.06, 8, false);
+        const tubeMat = new THREE.MeshStandardMaterial({ 
+          color: 0x94a3b8, 
+          transparent: true, 
+          opacity: 0.7 
+        });
+        const pipe = new THREE.Mesh(tubeGeo, tubeMat);
+        scene.add(pipe);
+      }
+    });
+
+    // Loop de Animação (Oscilação da chama e vapor)
+    let reqId: number;
+    let clock = new THREE.Clock();
     const animate = () => {
-      animationRef.current = requestAnimationFrame(animate);
-      
-      if (isPlaying) {
-        objectsRef.current.forEach((obj, index) => {
-          obj.rotation.x += rotationSpeed;
-          obj.rotation.y += rotationSpeed * (index + 1) * 0.5;
-        });
+      reqId = requestAnimationFrame(animate);
+      const time = clock.getElapsedTime();
+
+      if (flameLightRef.current) {
+        flameLightRef.current.intensity = 1.5 + Math.sin(time * 15) * 0.5;
       }
-      
+
       renderer.render(scene, camera);
     };
     animate();
 
-    // Handle resize
-    const handleResize = () => {
-      if (!containerRef.current || !camera || !renderer) return;
-      
-      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      renderer.domElement.removeEventListener('mousedown', onMouseDown);
-      renderer.domElement.removeEventListener('mouseup', onMouseUp);
-      renderer.domElement.removeEventListener('mousemove', onMouseMove);
-      renderer.domElement.removeEventListener('wheel', onWheel);
-      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(reqId);
       renderer.dispose();
-      containerRef.current?.removeChild(renderer.domElement);
     };
-  }, [isPlaying, rotationSpeed]);
-
-  const handleReset = () => {
-    if (cameraRef.current) {
-      cameraRef.current.position.set(0, 0, 5);
-      cameraRef.current.rotation.set(0, 0, 0);
-    }
-    objectsRef.current.forEach(obj => {
-      obj.rotation.set(0, 0, 0);
-    });
-  };
-
-  const handleZoomIn = () => {
-    if (cameraRef.current) {
-      cameraRef.current.position.z = Math.max(2, cameraRef.current.position.z - 0.5);
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (cameraRef.current) {
-      cameraRef.current.position.z = Math.min(10, cameraRef.current.position.z + 0.5);
-    }
-  };
-
-  const handleRotationSpeedChange = () => {
-    setRotationSpeed(prev => prev === 0.01 ? 0.03 : prev === 0.03 ? 0.05 : 0.01);
-  };
+  }, [projectData]);
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      <div 
-        ref={containerRef} 
-        className="flex-1 rounded-xl overflow-hidden border border-border shadow-lg"
-        style={{ minHeight: "400px" }}
-      />
-      
-      <div className="flex items-center justify-center gap-2 flex-wrap">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => setIsPlaying(!isPlaying)}
-        >
-          {isPlaying ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-          {isPlaying ? "Pause" : "Play"}
-        </Button>
-        
-        <Button variant="outline" size="sm" onClick={handleZoomIn}>
-          <ZoomIn className="w-4 h-4 mr-2" />
-          Zoom In
-        </Button>
-        
-        <Button variant="outline" size="sm" onClick={handleZoomOut}>
-          <ZoomOut className="w-4 h-4 mr-2" />
-          Zoom Out
-        </Button>
-        
-        <Button variant="outline" size="sm" onClick={handleRotationSpeedChange}>
-          <RotateCw className="w-4 h-4 mr-2" />
-          Speed: {rotationSpeed === 0.01 ? "Slow" : rotationSpeed === 0.03 ? "Medium" : "Fast"}
-        </Button>
-        
-        <Button variant="outline" size="sm" onClick={handleReset}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Reset
-        </Button>
+    <div className="h-full flex flex-col relative">
+      <div ref={containerRef} className="w-full h-full rounded-xl overflow-hidden border border-border" />
+      <div className="absolute top-4 left-4 bg-background/80 backdrop-blur p-2 rounded-lg border border-border text-xs space-y-1">
+        <p className="font-semibold text-primary">Simulação Física 3D</p>
+        <p className="text-muted-foreground">{projectData.nodes?.length || 0} aparelhos conectados</p>
       </div>
     </div>
   );
-};
-
-export default Simulation3D;
+}
