@@ -27,6 +27,25 @@ const VirtualLab = () => {
     edges: [],
   });
 
+  // Adicione a leitura e salvamento contínuo em localStorage com base no projectId:
+const storageKey = projectId ? `lab_design_${projectId}` : "lab_design_draft";
+
+const [designData, setDesignData] = useState<{ nodes: DiagramNode[]; edges: DiagramEdge[] }>(() => {
+  try {
+    const cached = localStorage.getItem(storageKey);
+    if (cached) return JSON.parse(cached);
+  } catch (e) {
+    console.error("Erro ao ler cache do design:", e);
+  }
+  return { nodes: [], edges: [] };
+});
+
+// Atualiza o estado e persiste automaticamente sempre que o usuário desenhar no 2D
+const handleDesignChange = useCallback((nodes: DiagramNode[], edges: DiagramEdge[]) => {
+  setDesignData({ nodes, edges });
+  localStorage.setItem(storageKey, JSON.stringify({ nodes, edges, updatedAt: new Date().toISOString() }));
+}, [storageKey]);
+
   const experiments = [
     {
       icon: Beaker,
