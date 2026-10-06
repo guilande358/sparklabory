@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useDiagramEditor } from "@/hooks/useDiagramEditor";
-import { DiagramNode, BlockType, Position } from "@/lib/diagramTypes";
+import { DiagramNode, DiagramEdge, BlockType, Position } from "@/lib/diagramTypes";
 import { SimulationEngine, SimulationWarning } from "@/lib/simulationEngine";
 import DiagramCanvas from "./designer/DiagramCanvas";
 import BlockPalette from "./designer/BlockPalette";
@@ -14,19 +14,32 @@ import { Button } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface Designer2DProps {
-  onRunSimulation: (nodes: DiagramNode[], edges: any[]) => void;
+  onRunSimulation: (nodes: DiagramNode[], edges: DiagramEdge[]) => void;
+  onChange?: (nodes: DiagramNode[], edges: DiagramEdge[]) => void;
   initialNodes?: DiagramNode[];
-  initialEdges?: any[];
+  initialEdges?: DiagramEdge[];
 }
 
-const Designer2D = ({ onRunSimulation, initialNodes = [], initialEdges = [] }: Designer2DProps) => {
+const Designer2D = ({
+  onRunSimulation,
+  onChange,
+  initialNodes = [],
+  initialEdges = [],
+}: Designer2DProps) => {
   const { toast } = useToast();
   const [state, actions] = useDiagramEditor(initialNodes, initialEdges);
   const [warnings, setWarnings] = useState<SimulationWarning[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
 
-  // Validate connections and show warnings
+  // Notifica o componente pai sempre que os nós ou arestas forem alterados
+  useEffect(() => {
+    if (onChange) {
+      onChange(state.nodes, state.edges);
+    }
+  }, [state.nodes, state.edges, onChange]);
+
+  // Validação contínua do motor de simulação
   useEffect(() => {
     const engine = new SimulationEngine();
     engine.parseDesign(state.nodes, state.edges);
@@ -36,19 +49,11 @@ const Designer2D = ({ onRunSimulation, initialNodes = [], initialEdges = [] }: D
   }, [state.nodes, state.edges]);
 
   const handleBlockDrag = useCallback((type: BlockType, label: string) => {
-    // This is called when drag starts - could show a preview
+    // Espaço reservado para visualização em drag
   }, []);
-
-  // No useEffect que monitora nós e arestas:
-useEffect(() => {
-  if (onChange) {
-    onChange(state.nodes, state.edges);
-  }
-}, [state.nodes, state.edges, onChange]);
 
   const handleAddCustomBlock = useCallback(
     (type: BlockType, label: string) => {
-      // Add block at center of canvas
       actions.addNode(type, label, { x: 200, y: 200 });
       toast({
         title: "Bloco adicionado",
@@ -68,7 +73,6 @@ useEffect(() => {
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      // Save to localStorage for now
       const design = {
         nodes: state.nodes,
         edges: state.edges,
@@ -164,16 +168,13 @@ useEffect(() => {
   const selectedEdge = state.edges.find((e) => e.id === state.selectedEdgeId) || null;
   const visibleWarnings = warnings.filter((w) => !dismissedWarnings.has(w.id));
 
-  // Keyboard shortcuts
+  // Atalhos de teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "s") {
           e.preventDefault();
           handleSave();
-        } else if (e.key === "z") {
-          e.preventDefault();
-          // Undo would be implemented with history
         }
       } else if (e.key === "r" && !e.ctrlKey && !e.metaKey) {
         const target = e.target as HTMLElement;
@@ -190,7 +191,7 @@ useEffect(() => {
 
   return (
     <div className="flex flex-col h-full gap-4">
-      {/* Toolbar */}
+      {/* Barra de Ferramentas */}
       <DesignerToolbar
         zoom={state.zoom}
         onZoomIn={() => actions.setZoom(state.zoom + 0.1)}
@@ -203,7 +204,7 @@ useEffect(() => {
         isSaving={isSaving}
       />
 
-      {/* Warnings */}
+      {/* Avisos de Segurança Quimica */}
       {visibleWarnings.length > 0 && (
         <div className="space-y-2">
           {visibleWarnings.slice(0, 3).map((warning) => (
@@ -227,11 +228,12 @@ useEffect(() => {
         </div>
       )}
 
+      {/* Painel de Reações e Análise com IA */}
       <ReactionsPanel nodes={state.nodes} edges={state.edges} />
 
-      {/* Main content */}
+      {/* Área de Trabalho Dividida */}
       <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-xl border border-border">
-        {/* Block Palette */}
+        {/* Paleta de Blocos */}
         <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
           <BlockPalette
             onBlockDrag={handleBlockDrag}
@@ -241,7 +243,7 @@ useEffect(() => {
 
         <ResizableHandle withHandle />
 
-        {/* Canvas */}
+        {/* Canvas do Diagrama */}
         <ResizablePanel defaultSize={55} minSize={40}>
           <DiagramCanvas
             nodes={state.nodes}
@@ -268,7 +270,7 @@ useEffect(() => {
 
         <ResizableHandle withHandle />
 
-        {/* Properties Panel */}
+        {/* Painel Lateral de Propriedades */}
         <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
           <div className="h-full bg-card rounded-r-xl border-l border-border overflow-auto">
             <BlockPropertiesPanel
