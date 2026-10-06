@@ -46,6 +46,23 @@ const handleDesignChange = useCallback((nodes: DiagramNode[], edges: DiagramEdge
   localStorage.setItem(storageKey, JSON.stringify({ nodes, edges, updatedAt: new Date().toISOString() }));
 }, [storageKey]);
 
+  {activeTab === "designer" ? (
+  <Designer2D 
+    onRunSimulation={(nodes, edges) => {
+      handleDesignChange(nodes, edges);
+      setActiveTab("preview");
+    }}
+    onChange={handleDesignChange}
+    initialNodes={designData.nodes}
+    initialEdges={designData.edges}
+  />
+) : (
+  <Simulation3D 
+    projectData={designData}
+    onBackToDesigner={() => setActiveTab("designer")}
+  />
+)}
+
   const experiments = [
     {
       icon: Beaker,
