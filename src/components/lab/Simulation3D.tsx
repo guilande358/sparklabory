@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { DiagramNode, DiagramEdge } from "@/lib/diagramTypes";
-import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCw, ZoomIn, ZoomOut, Flame, AlertCircle } from "lucide-react";
 
 interface Simulation3DProps {
   projectData: { nodes: DiagramNode[]; edges: DiagramEdge[] };
@@ -11,10 +9,7 @@ interface Simulation3DProps {
 
 export default function Simulation3D({ projectData }: Simulation3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const [isHeating, setIsHeating] = useState(true);
   const flameLightRef = useRef<THREE.PointLight | null>(null);
-  const particlesRef = useRef<THREE.Points | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -24,7 +19,6 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
     // 1. Cenário e Luzes de Laboratório
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f141c);
-    sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     camera.position.set(0, 4, 8);
@@ -56,23 +50,22 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
     bench.receiveShadow = true;
     scene.add(bench);
 
-    // Grid de alinhamento modular na bancada
+    // Grid modular na bancada
     const grid = new THREE.GridHelper(12, 24, 0x38bdf8, 0x334155);
     grid.position.y = 0.01;
     scene.add(grid);
 
     // 2. Mapeamento dos Blocos 2D para Aparelhos 3D
     const nodeObjects = new Map<string, THREE.Group>();
-    const nodes = projectData.nodes || [];
+    const nodes = projectData?.nodes || [];
     const count = nodes.length;
 
     nodes.forEach((node, idx) => {
       const group = new THREE.Group();
-      // Distribui os equipamentos na bancada com base na posição X do 2D ou índice
       const posX = count > 1 ? ((idx / (count - 1)) - 0.5) * 6 : 0;
       group.position.set(posX, 0, 0);
 
-      const label = node.label.toLowerCase();
+      const label = (node.label || "").toLowerCase();
 
       if (label.includes("fogo") || label.includes("bunsen") || label.includes("aquec") || node.type === "process") {
         // --- BICO DE BUNSEN ---
@@ -87,7 +80,7 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
         tube.position.y = 0.7;
         group.add(base, tube);
 
-        // Chama de fogo (Cone translúcido azul + laranja)
+        // Chama de fogo (Cone translúcido)
         const flameGeo = new THREE.ConeGeometry(0.2, 0.8, 16);
         const flameMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
         const flame = new THREE.Mesh(flameGeo, flameMat);
@@ -100,7 +93,6 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
         flameLightRef.current = flameLight;
       } else {
         // --- BÉQUER / FRASCO DE VIDRO ---
-        // Vidro exterior
         const glassGeo = new THREE.CylinderGeometry(0.6, 0.6, 1.4, 32, 1, true);
         const glassMat = new THREE.MeshPhysicalMaterial({
           color: 0xffffff,
@@ -113,19 +105,18 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
         const glass = new THREE.Mesh(glassGeo, glassMat);
         glass.position.y = 0.7;
 
-        // Fundo do béquer
         const bottom = new THREE.Mesh(
           new THREE.CylinderGeometry(0.6, 0.6, 0.05, 32),
           glassMat
         );
         bottom.position.y = 0.025;
 
-        // Líquido interno (com cor baseada na substância)
+        // Cor do líquido baseada na substância química
         let liquidColor = 0x0284c7; // Azul padrão
-        if (label.includes("ácido") || label.includes("hcl")) liquidColor = 0xef4444;
-        if (label.includes("base") || label.includes("naoh")) liquidColor = 0xa855f7;
-        if (label.includes("vinagre")) liquidColor = 0xfacc15;
-        if (label.includes("água") || label.includes("h2o")) liquidColor = 0x38bdf8;
+        if (label.includes("ácido") || label.includes("hcl")) liquidColor = 0xef4444; // Vermelho
+        if (label.includes("base") || label.includes("naoh")) liquidColor = 0xa855f7;  // Púrpura
+        if (label.includes("vinagre")) liquidColor = 0xfacc15;                         // Amarelo
+        if (label.includes("água") || label.includes("h2o")) liquidColor = 0x38bdf8;   // Azul claro
 
         const liquidGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.9, 32);
         const liquidMat = new THREE.MeshStandardMaterial({
@@ -145,7 +136,7 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
     });
 
     // 3. Tubulações de Conexão Física (Mangueiras entre recipientes)
-    (projectData.edges || []).forEach(edge => {
+    (projectData?.edges || []).forEach(edge => {
       const sourceObj = nodeObjects.get(edge.source);
       const targetObj = nodeObjects.get(edge.target);
       if (sourceObj && targetObj) {
@@ -169,9 +160,9 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
       }
     });
 
-    // Loop de Animação (Oscilação da chama e vapor)
+    // Loop de Animação (Oscilação da chama)
     let reqId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
     const animate = () => {
       reqId = requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
@@ -195,7 +186,7 @@ export default function Simulation3D({ projectData }: Simulation3DProps) {
       <div ref={containerRef} className="w-full h-full rounded-xl overflow-hidden border border-border" />
       <div className="absolute top-4 left-4 bg-background/80 backdrop-blur p-2 rounded-lg border border-border text-xs space-y-1">
         <p className="font-semibold text-primary">Simulação Física 3D</p>
-        <p className="text-muted-foreground">{projectData.nodes?.length || 0} aparelhos conectados</p>
+        <p className="text-muted-foreground">{projectData?.nodes?.length || 0} aparelhos conectados</p>
       </div>
     </div>
   );
